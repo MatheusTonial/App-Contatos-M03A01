@@ -1,7 +1,9 @@
 package com.tonial.appcontatos.ui.contact.list
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +19,6 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -35,14 +36,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tonial.appcontatos.R
 import com.tonial.appcontatos.data.Contact
+import com.tonial.appcontatos.data.groupByInitial
+import com.tonial.appcontatos.ui.shared.composables.ContactAvatar
+import com.tonial.appcontatos.ui.shared.composables.DefaultErrorState
+import com.tonial.appcontatos.ui.shared.composables.DefaultLoadingState
+import com.tonial.appcontatos.ui.shared.composables.FavoriteIconButton
 import com.tonial.appcontatos.ui.theme.AppContatosTheme
 import kotlin.random.Random
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun ContactsListScreen(
@@ -51,9 +58,12 @@ fun ContactsListScreen(
 ){
     val contentModifier = modifier.fillMaxSize()
     if(viewModel.uiState.value.isLoading) {
-        LoadingState(modifier = contentModifier)
+        DefaultLoadingState(
+            modifier = contentModifier,
+            loadingMessage = stringResource(R.string.carregando_contatos)
+        )
     } else if(viewModel.uiState.value.hasError) {
-        ErrorState(
+        DefaultErrorState(
             modifier = contentModifier,
             onTryAgainPress = viewModel::loadContact)
     }
@@ -124,85 +134,6 @@ fun AppBarPreview() {
 }
 
 @Composable
-fun LoadingState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(60.dp)
-        )
-        Spacer(Modifier.size(8.dp))
-        Text(
-            text = "Carregando contatos...",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoadingStatePreview() {
-    AppContatosTheme() {
-        LoadingState()
-    }
-}
-
-@Composable
-fun ErrorState(
-    modifier: Modifier = Modifier,
-    onTryAgainPress: () -> Unit = {}
-) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Filled.CloudOff,
-            contentDescription = "Erro ao carregar",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(80.dp)
-        )
-        val textPadding = PaddingValues(
-            top = 8.dp,
-            start = 8.dp,
-            end = 8.dp
-        )
-        Text(
-            modifier = Modifier.padding(textPadding),
-            text = "Erro ao carregar contatos",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            modifier = Modifier.padding(textPadding),
-            text = "Aguarde um momento e tente novamente",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-        ElevatedButton(
-            modifier = Modifier.padding(top = 8.dp),
-            onClick = {onTryAgainPress()}
-        ) {
-            Text("Tentar novamente")
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ErrorStatePreview(modifier: Modifier = Modifier) {
-    AppContatosTheme {
-        ErrorState(onTryAgainPress = {})
-    }
-}
-
-@Composable
 fun EmptyList(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
@@ -244,19 +175,35 @@ fun EmptyListPreview() {
 @Composable
 fun List(
     modifier: Modifier = Modifier,
-    contacts: List<Contact> = emptyList(),
+    contacts: Map<String,List<Contact>> = emptyMap(),
     onFavoritePressesd: (Contact) -> Unit
     ) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            //.verticalScroll(state = rememberScrollState())
     ) {
-        items(contacts){ contact ->
-            ContactListItem(
-                contact = contact,
-                onFavoritePressesd = onFavoritePressesd
-            )
+        contacts.forEach { key, contacts ->
+            stickyHeader {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = MaterialTheme.colorScheme.secondaryContainer)
+                ){
+                    Text(
+                        text = key,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 8.dp, start = 8.dp),
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            items(contacts){ contact ->
+                ContactListItem(
+                    contact = contact,
+                    onFavoritePressesd = onFavoritePressesd
+                )
+            }
         }
     }
 }
@@ -272,26 +219,17 @@ fun ContactListItem(
         headlineContent = {
             Text(contact.fullName)
         },
+        leadingContent = {
+            ContactAvatar(
+                firstName = contact.firstName,
+                lastName =  contact.lastName,
+            )
+        },
         trailingContent = {
-            IconButton(
-                onClick = {
-                    onFavoritePressesd(contact)
-                }
-            ) {
-                Icon(
-                    imageVector = if (contact.isFavorite) {
-                        Icons.Filled.Favorite
-                    } else {
-                        Icons.Filled.FavoriteBorder
-                    },
-                    contentDescription = "Favoritar",
-                    tint = if (contact.isFavorite) {
-                        Color.Red
-                    } else {
-                        LocalContentColor.current
-                    }
-                )
-            }
+            FavoriteIconButton(
+                isFavorite = contact.isFavorite,
+                onFavoritePressesd = { onFavoritePressesd(contact) }
+            )
         }
     )
 }
@@ -302,7 +240,7 @@ fun ContactListItem(
 fun ListPreview() {
     AppContatosTheme {
         List(
-            contacts = generateContacts(),
+            contacts = generateContacts().groupByInitial(),
             onFavoritePressesd = {}
         )
     }
