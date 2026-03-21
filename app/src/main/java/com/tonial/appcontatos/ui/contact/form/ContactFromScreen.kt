@@ -13,21 +13,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.tonial.appcontatos.ui.theme.AppContatosTheme
 
 @Composable
-fun ContactFormScreen(modifier: Modifier = Modifier) {
+fun ContactFormScreen(
+    modifier: Modifier = Modifier,
+    onBackPress: () -> Unit
+) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             AppBar(
                 isNewContact = true,
                 onBackPress = {},
-                onSavePress = {}
             )
         }
     ) { paddingValues ->
@@ -44,7 +45,6 @@ fun AppBar(
     modifier: Modifier = Modifier,
     isNewContact: Boolean,
     onBackPress: () -> Unit,
-    onSavePress: () -> Unit
 ) {
     TopAppBar(
         modifier = modifier.fillMaxWidth(),
@@ -75,7 +75,6 @@ private fun AppBarPreview(
         AppBar(
             isNewContact = isNewContact,
             onBackPress = {},
-            onSavePress = {}
         )
     }
 }

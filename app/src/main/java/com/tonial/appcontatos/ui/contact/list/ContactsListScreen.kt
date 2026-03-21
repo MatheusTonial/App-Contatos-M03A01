@@ -2,6 +2,7 @@ package com.tonial.appcontatos.ui.contact.list
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +56,9 @@ import kotlin.random.Random
 @Composable
 fun ContactsListScreen(
     modifier: Modifier = Modifier,
-    viewModel: ContactsListViewModel = viewModel()
+    viewModel: ContactsListViewModel = viewModel(),
+    onAddPressed: () -> Unit,
+    onContactPressed: (Contact) -> Unit
 ){
     val contentModifier = modifier.fillMaxSize()
     if(viewModel.uiState.isLoading) {
@@ -76,9 +79,7 @@ fun ContactsListScreen(
                     onRefreshPressed = viewModel::loadContact
             )},
             floatingActionButton = {
-                ExtendedFloatingActionButton(onClick = {
-                    //todo = navega formulario
-                }) {
+                ExtendedFloatingActionButton(onClick = onAddPressed) {
                     Icon(
                         imageVector = Icons.Filled.Add,
                         contentDescription = "Adicionar"
@@ -95,7 +96,9 @@ fun ContactsListScreen(
                 List(
                     modifier =  defaultModifier,
                     contacts = viewModel.uiState.contacts,
-                    onFavoritePressesd = viewModel::toggleIsFavorite)
+                    onFavoritePressesd = viewModel::toggleIsFavorite,
+                    onContactPressed = onContactPressed
+                )
             }
         }
     }
@@ -177,7 +180,8 @@ fun EmptyListPreview() {
 fun List(
     modifier: Modifier = Modifier,
     contacts: Map<String,List<Contact>> = emptyMap(),
-    onFavoritePressesd: (Contact) -> Unit
+    onFavoritePressesd: (Contact) -> Unit,
+    onContactPressed: (Contact) -> Unit
     ) {
     LazyColumn(
         modifier = modifier
@@ -202,7 +206,8 @@ fun List(
             items(contacts){ contact ->
                 ContactListItem(
                     contact = contact,
-                    onFavoritePressesd = onFavoritePressesd
+                    onFavoritePressesd = onFavoritePressesd,
+                    onContactPressed = onContactPressed
                 )
             }
         }
@@ -213,10 +218,13 @@ fun List(
 fun ContactListItem(
     modifier: Modifier = Modifier,
     contact: Contact,
-    onFavoritePressesd: (Contact) -> Unit
+    onFavoritePressesd: (Contact) -> Unit,
+    onContactPressed: (Contact) -> Unit
 ) {
     ListItem(
-        modifier = modifier,
+        modifier = modifier.clickable {
+            onContactPressed(contact)
+        },
         headlineContent = {
             Text(contact.fullName)
         },
@@ -242,7 +250,8 @@ fun ListPreview() {
     AppContatosTheme {
         List(
             contacts = generateContacts().groupByInitial(),
-            onFavoritePressesd = {}
+            onFavoritePressesd = {},
+            onContactPressed = {}
         )
     }
 }
