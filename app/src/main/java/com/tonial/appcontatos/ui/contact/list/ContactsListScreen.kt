@@ -1,4 +1,4 @@
-package com.tonial.appcontatos.ui.contact
+package com.tonial.appcontatos.ui.contact.list
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
@@ -33,11 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,85 +41,32 @@ import androidx.compose.ui.unit.dp
 import com.tonial.appcontatos.R
 import com.tonial.appcontatos.data.Contact
 import com.tonial.appcontatos.ui.theme.AppContatosTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.random.Random
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun ContactsListScreen(
     modifier: Modifier = Modifier,
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
+    viewModel: ContactsListViewModel = viewModel()
 ){
-    val isInitialCompositionState: MutableState<Boolean> = rememberSaveable {
-        mutableStateOf(true)
-    }
-
-    val isLoadingState: MutableState<Boolean> = rememberSaveable {
-        mutableStateOf(false)
-    }
-    var isErrorState: MutableState<Boolean> = rememberSaveable {
-        mutableStateOf(false)
-    }
-    var contactsState: MutableState<List<Contact>> = rememberSaveable {
-        mutableStateOf(listOf())
-    }
-
-    val loadContact: () -> Unit = {
-        isLoadingState.value = true
-        isErrorState.value = false
-
-        coroutineScope.launch {
-            delay(2000)
-            isErrorState.value = Random.nextBoolean()
-            if(!isErrorState.value) {
-                val isEmpty = Random.nextBoolean()
-                if(isEmpty){
-                    contactsState.value = listOf()
-                }
-                else{
-                    contactsState.value = generateContacts()
-                }
-            }
-            isLoadingState.value = false
-        }
-    }
-
-    val toggleIsFavorite: (Contact) -> Unit = { updatedContact ->
-        contactsState.value = contactsState.value.map { currentContact ->
-            if(currentContact.id == updatedContact.id){
-                currentContact.copy(isFavorite = !currentContact.isFavorite)
-            } else{
-                currentContact
-            }
-        }
-    }
-
-    if(isInitialCompositionState.value) {
-        loadContact()
-        isInitialCompositionState.value = false
-    }
-
     val contentModifier = modifier.fillMaxSize()
-    if(isLoadingState.value) {
+    if(viewModel.uiState.value.isLoading) {
         LoadingState(modifier = contentModifier)
-    } else if(isErrorState.value) {
-        ErrorState(modifier = contentModifier, onTryAgainPress = loadContact)
+    } else if(viewModel.uiState.value.hasError) {
+        ErrorState(
+            modifier = contentModifier,
+            onTryAgainPress = viewModel::loadContact)
     }
     else{
         Scaffold(
             modifier = modifier.fillMaxSize(),
             topBar = {
                 AppBar(
-                    onRefreshPressed = {
-                        loadContact()
-                    }
+                    onRefreshPressed = viewModel::loadContact
             )},
             floatingActionButton = {
                 ExtendedFloatingActionButton(onClick = {
-                    contactsState.value = contactsState.value.plus(
-                        Contact(firstName = "batata", lastName = "doce")
-                    )
+                    //todo = navega formulario
                 }) {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -138,13 +78,13 @@ fun ContactsListScreen(
             }
         ) { paddingValues ->
             val defaultModifier:Modifier = Modifier.padding(paddingValues)
-            if(contactsState.value.isEmpty()) {
+            if(viewModel.uiState.value.contacts.isEmpty()) {
                 EmptyList(modifier = defaultModifier)
             } else{
                 List(
                     modifier =  defaultModifier,
-                    contacts = contactsState.value,
-                    onFavoritePressesd = toggleIsFavorite)
+                    contacts = viewModel.uiState.value.contacts,
+                    onFavoritePressesd = viewModel::toggleIsFavorite)
             }
         }
     }
@@ -368,7 +308,7 @@ fun ListPreview() {
     }
 }
 
-private fun generateContacts(): List<Contact> {
+fun generateContacts(): List<Contact> {
     val firstNames = listOf(
         "João", "José", "Everton", "Marcos", "André", "Anderson", "Antônio",
         "Laura", "Ana", "Maria", "Joaquina", "Suelen"
