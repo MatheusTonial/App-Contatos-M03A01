@@ -58,12 +58,12 @@ fun ContactsListScreen(
     viewModel: ContactsListViewModel = viewModel()
 ){
     val contentModifier = modifier.fillMaxSize()
-    if(viewModel.uiState.value.isLoading) {
+    if(viewModel.uiState.isLoading) {
         DefaultLoadingState(
             modifier = contentModifier,
             loadingMessage = stringResource(R.string.carregando_contatos)
         )
-    } else if(viewModel.uiState.value.hasError) {
+    } else if(viewModel.uiState.hasError) {
         DefaultErrorState(
             modifier = contentModifier,
             onTryAgainPress = viewModel::loadContact)
@@ -89,12 +89,12 @@ fun ContactsListScreen(
             }
         ) { paddingValues ->
             val defaultModifier:Modifier = Modifier.padding(paddingValues)
-            if(viewModel.uiState.value.contacts.isEmpty()) {
+            if(viewModel.uiState.contacts.isEmpty()) {
                 EmptyList(modifier = defaultModifier)
             } else{
                 List(
                     modifier =  defaultModifier,
-                    contacts = viewModel.uiState.value.contacts,
+                    contacts = viewModel.uiState.contacts,
                     onFavoritePressesd = viewModel::toggleIsFavorite)
             }
         }
