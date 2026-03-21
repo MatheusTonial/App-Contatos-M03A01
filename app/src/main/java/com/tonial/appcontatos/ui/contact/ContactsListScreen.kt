@@ -92,6 +92,16 @@ fun ContactsListScreen(
         }
     }
 
+    val toggleIsFavorite: (Contact) -> Unit = { updatedContact ->
+        contactsState.value = contactsState.value.map { currentContact ->
+            if(currentContact.id == updatedContact.id){
+                currentContact.copy(isFavorite = !currentContact.isFavorite)
+            } else{
+                currentContact
+            }
+        }
+    }
+
     if(isInitialCompositionState.value) {
         loadContact()
         isInitialCompositionState.value = false
@@ -131,7 +141,10 @@ fun ContactsListScreen(
             if(contactsState.value.isEmpty()) {
                 EmptyList(modifier = defaultModifier)
             } else{
-                List(modifier =  defaultModifier, contacts = contactsState.value)
+                List(
+                    modifier =  defaultModifier,
+                    contacts = contactsState.value,
+                    onFavoritePressesd = toggleIsFavorite)
             }
         }
     }
@@ -291,7 +304,8 @@ fun EmptyListPreview() {
 @Composable
 fun List(
     modifier: Modifier = Modifier,
-    contacts: List<Contact> = emptyList()
+    contacts: List<Contact> = emptyList(),
+    onFavoritePressesd: (Contact) -> Unit
     ) {
     LazyColumn(
         modifier = modifier
@@ -299,45 +313,57 @@ fun List(
             //.verticalScroll(state = rememberScrollState())
     ) {
         items(contacts){ contact ->
-            val isFavoriteState: MutableState<Boolean> = rememberSaveable {
-                mutableStateOf(contact.isFavorite)
-            }
-            ListItem(
-                headlineContent = {
-                    Text(contact.fullName)
-                },
-                trailingContent = {
-                    IconButton(
-                        onClick = {
-                            isFavoriteState.value = !isFavoriteState.value
-                        }
-                    ) {
-                        Icon(
-                            imageVector = if(isFavoriteState.value) {
-                                Icons.Filled.Favorite
-                            } else {
-                                Icons.Filled.FavoriteBorder
-                            },
-                            contentDescription = "Favoritar",
-                            tint = if(isFavoriteState.value) {
-                                Color.Red
-                            } else {
-                                LocalContentColor.current
-                            }
-                        )
-                    }
-                }
+            ContactListItem(
+                contact = contact,
+                onFavoritePressesd = onFavoritePressesd
             )
         }
     }
 }
+
+@Composable
+fun ContactListItem(
+    modifier: Modifier = Modifier,
+    contact: Contact,
+    onFavoritePressesd: (Contact) -> Unit
+) {
+    ListItem(
+        modifier = modifier,
+        headlineContent = {
+            Text(contact.fullName)
+        },
+        trailingContent = {
+            IconButton(
+                onClick = {
+                    onFavoritePressesd(contact)
+                }
+            ) {
+                Icon(
+                    imageVector = if (contact.isFavorite) {
+                        Icons.Filled.Favorite
+                    } else {
+                        Icons.Filled.FavoriteBorder
+                    },
+                    contentDescription = "Favoritar",
+                    tint = if (contact.isFavorite) {
+                        Color.Red
+                    } else {
+                        LocalContentColor.current
+                    }
+                )
+            }
+        }
+    )
+}
+
 
 @Preview(showBackground = true)
 @Composable
 fun ListPreview() {
     AppContatosTheme {
         List(
-            contacts = generateContacts()
+            contacts = generateContacts(),
+            onFavoritePressesd = {}
         )
     }
 }
