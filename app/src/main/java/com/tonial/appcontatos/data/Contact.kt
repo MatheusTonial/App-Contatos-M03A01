@@ -23,7 +23,7 @@ data class Contact(
 fun List<Contact>.groupByInitial() : Map<String, List<Contact>> = sortedBy { it.fullName }
 .groupBy { it.fullName.take(1) }
 
-fun LocalDate.Format(): String{
+fun LocalDate.format(): String{
     val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     return format(formatter)
 }
