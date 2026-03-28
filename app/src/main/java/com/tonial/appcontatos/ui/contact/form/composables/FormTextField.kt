@@ -30,7 +30,7 @@ fun FormTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     errorMessage: String = "",
-    keyboardCaptalization: KeyboardCapitalization = KeyboardCapitalization.Unspecified,
+    keyboardCapitalization: KeyboardCapitalization = KeyboardCapitalization.Unspecified,
     keyboardImeAction: ImeAction = ImeAction.Next,
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
@@ -48,7 +48,7 @@ fun FormTextField(
             readOnly = readOnly,
             isError = hasError,
             keyboardOptions = KeyboardOptions(
-                capitalization = keyboardCaptalization,
+                capitalization = keyboardCapitalization,
                 imeAction = keyboardImeAction,
                 keyboardType = keyboardType
             ),
