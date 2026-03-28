@@ -4,20 +4,20 @@ import com.tonial.appcontatos.data.Contact
 import com.tonial.appcontatos.data.ContactTypeEnum
 import java.time.LocalDate
 
-data class FromField<T>(
+data class FormField<T>(
     val value: T,
     val errorMessage: String = ""
 )
 
-data class FrormState(
-    val firstName: FromField<String> = FromField(""),
-    val lastName: FromField<String> = FromField(""),
-    val phoneNumber: FromField<String> = FromField(""),
-    val email: FromField<String> = FromField(""),
-    val isFavorite: FromField<Boolean> = FromField(false),
-    val assetValue: FromField<String> = FromField(""),
-    val birthDate: FromField<LocalDate> = FromField(LocalDate.now()),
-    val type: FromField<ContactTypeEnum> = FromField(ContactTypeEnum.PERSONAL)
+data class FormState(
+    val firstName: FormField<String> = FormField(""),
+    val lastName: FormField<String> = FormField(""),
+    val phoneNumber: FormField<String> = FormField(""),
+    val email: FormField<String> = FormField(""),
+    val isFavorite: FormField<Boolean> = FormField(false),
+    val assetValue: FormField<String> = FormField(""),
+    val birthDate: FormField<LocalDate> = FormField(LocalDate.now()),
+    val type: FormField<ContactTypeEnum> = FormField(ContactTypeEnum.PERSONAL)
     )
 
 data class ContactFormState(
@@ -25,7 +25,7 @@ data class ContactFormState(
     val isLoading: Boolean = false,
     val contact: Contact = Contact(),
     val hasErrorLoading: Boolean = false,
-    val formState: FrormState = FrormState()
+    val formState: FormState = FormState()
 ){
     val isNewContatct get() : Boolean = contactId <= 0
 }
