@@ -66,6 +66,18 @@ class ContactFormViewModel (
         }
     }
 
+    fun onFormEvent(event: FormEvent) {
+        when (event) {
+            is FormEvent.UpdateAssetValue -> onAssetValueChanged(event.newValue)
+            is FormEvent.UpdateBirthDate -> onBirthDateChanged(event.newValue)
+            is FormEvent.UpdateEmail -> onEmailChanged(event.newValue)
+            is FormEvent.UpdateFirstName -> onFirstNameChanged(event.newValue)
+            is FormEvent.UpdateIsFavorite -> onIsFavoriteChanged(event.newValue)
+            is FormEvent.UpdateLastName -> onLastNameChanged(event.newValue)
+            is FormEvent.UpdatePhoneNumber -> onPhoneNumberChanged(event.newValue)
+            is FormEvent.UpdateType -> onTypeChanged(event.newValue)
+        }
+    }
     private fun onFirstNameChanged(newValue: String) {
         if (uiState.formState.firstName.value != newValue) {
             uiState = uiState.copy(
