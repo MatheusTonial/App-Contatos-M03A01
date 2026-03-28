@@ -78,6 +78,86 @@ class ContactFormViewModel (
             is FormEvent.UpdateType -> onTypeChanged(event.newValue)
         }
     }
+
+    fun save(){
+        if(uiState.isProcessing || !isValidForm()) return
+
+        uiState = uiState.copy(
+            isProcessing = true,
+            processingErrorMessage = ""
+        )
+        viewModelScope.launch {
+            delay(2000)
+            val hasError = Random.nextBoolean()
+            uiState = if(hasError){
+                uiState.copy(
+                    isProcessing = false,
+                    processingErrorMessage = "Erro 1"
+                )
+            }
+            else{
+                val contactToSave = uiState.contact.copy(
+                    firstName = uiState.formState.firstName.value,
+                    lastName = uiState.formState.lastName.value,
+                    phoneNumber = uiState.formState.phoneNumber.value,
+                    email = uiState.formState.email.value,
+                    isFavorite = uiState.formState.isFavorite.value,
+                    assetValue = uiState.formState.assetValue.value.let {
+                        if (it.isBlank()) {
+                            BigDecimal.ZERO
+                        } else {
+                            BigDecimal(it)
+                        }
+                    },
+                    type = uiState.formState.type.value,
+                    BirthDate = uiState.formState.birthDate.value
+                )
+                ContactDatasource.instance.save(contactToSave)
+                uiState.copy(
+                    isProcessing = false,
+                    processingErrorMessage = "sdas"
+                )
+            }
+        }
+    }
+
+    fun showConfirmationDialog(){
+        uiState = uiState.copy(
+            showConfirmationDialog = true
+        )
+    }
+
+    fun hideConfirmationDialog() {
+        uiState = uiState.copy(
+            showConfirmationDialog = false
+        )
+    }
+
+    fun delete(){
+        uiState = uiState.copy(
+            showConfirmationDialog = false,
+            isProcessing = true,
+            processingErrorMessage = ""
+        )
+        viewModelScope.launch {
+            delay(2000)
+            val hasError = Random.nextBoolean()
+            uiState = if(hasError){
+                uiState.copy(
+                    isProcessing = false,
+                    processingErrorMessage = "Erro ao deletar"
+                )
+            }
+            else{
+                ContactDatasource.instance.delete(uiState.contact)
+                uiState.copy(
+                    isProcessing = false,
+                    contactUpdate = true
+                )
+            }
+        }
+    }
+
     private fun onFirstNameChanged(newValue: String) {
         if (uiState.formState.firstName.value != newValue) {
             uiState = uiState.copy(
@@ -198,5 +278,26 @@ class ContactFormViewModel (
                 )
             )
         }
+    }
+
+    private fun isValidForm(): Boolean{
+        uiState = uiState.copy(
+            formState = uiState.formState.copy(
+                firstName = uiState.formState.firstName.copy(
+                    errorMessage = if (uiState.formState.firstName.value.isBlank()) "O nome é obrigatório" else ""
+                ),
+                phoneNumber = uiState.formState.phoneNumber.copy(
+                    errorMessage = validadePhoneNumber(uiState.formState.phoneNumber.value
+                    )
+                ),
+                email = uiState.formState.email.copy(
+                    errorMessage = validadeEmail(uiState.formState.email.value)
+                ),
+                assetValue = uiState.formState.assetValue.copy(
+                    errorMessage = validadeAssetValue(uiState.formState.assetValue.value)
+                ),
+            )
+        )
+        return uiState.formState.isValid
     }
 }

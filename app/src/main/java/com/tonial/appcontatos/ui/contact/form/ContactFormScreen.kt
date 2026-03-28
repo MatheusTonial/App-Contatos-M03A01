@@ -1,25 +1,36 @@
 package com.tonial.appcontatos.ui.contact.form
 
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -29,6 +40,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.tonial.appcontatos.data.Contact
 import com.tonial.appcontatos.data.ContactTypeEnum
 import com.tonial.appcontatos.ui.contact.form.composables.FormCheckbox
@@ -45,8 +57,30 @@ import com.tonial.appcontatos.ui.theme.AppContatosTheme
 fun ContactFormScreen(
     modifier: Modifier = Modifier,
     onBackPress: () -> Unit,
-    viewModel: ContactFormViewModel = viewModel()
+    viewModel: ContactFormViewModel = viewModel(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onContactSaved: () -> Unit
 ) {
+    LaunchedEffect(viewModel.uiState.contactUpdate) {
+        if(viewModel.uiState.contactUpdate){
+            onContactSaved()
+        }
+    }
+
+    LaunchedEffect(snackbarHostState, viewModel.uiState.processingErrorMessage) {
+        if(viewModel.uiState.processingErrorMessage.isNotBlank()){
+            snackbarHostState.showSnackbar("Erro ao salvar contato")
+        }
+    }
+
+    if(viewModel.uiState.showConfirmationDialog) {
+        ConfirmationDialog(
+            content = "Deseja deletar o contato?",
+            onDismiss = viewModel::hideConfirmationDialog,
+            onConfirm = viewModel::delete
+        )
+    }
+
     val contentModifier: Modifier = modifier.fillMaxSize()
     if (viewModel.uiState.isLoading) {
         DefaultLoadingState(modifier = contentModifier)
@@ -58,16 +92,24 @@ fun ContactFormScreen(
     } else {
         Scaffold(
             modifier = contentModifier,
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
             topBar = {
                 AppBar(
-                    isNewContact = true,
-                    onBackPress = onBackPress
+                    isNewContact = viewModel.uiState.isNewContatct,
+                    onBackPress = onBackPress,
+                    isProcessing = viewModel.uiState.isProcessing,
+                    onSavePressed = viewModel::save,
+                    onDeletePressed = viewModel::showConfirmationDialog
                 )
             }
         ) { paddingValues ->
             FormContent(
                 modifier = Modifier.padding(paddingValues),
-                contact = viewModel.uiState.contact
+                formState = viewModel.uiState.formState,
+                onFormEvent = viewModel::onFormEvent,
+                isSaving = viewModel.uiState.isProcessing
             )
         }
     }
@@ -79,6 +121,9 @@ fun AppBar(
     modifier: Modifier = Modifier,
     isNewContact: Boolean,
     onBackPress: () -> Unit,
+    isProcessing: Boolean,
+    onSavePressed: () -> Unit,
+    onDeletePressed: () -> Unit
 ) {
     TopAppBar(
         modifier = modifier.fillMaxWidth(),
@@ -91,6 +136,32 @@ fun AppBar(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Voltar"
                 )
+            }
+        },
+        actions = {
+            if(isProcessing){
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .padding(16.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
+            else {
+                if(!isNewContact){
+                    IconButton(onClick = onDeletePressed) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Deletar"
+                        )
+                    }
+                }
+                IconButton(onClick = onSavePressed) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Salvar"
+                    )
+                }
             }
         }
     )
@@ -109,6 +180,25 @@ private fun AppBarPreview(
         AppBar(
             isNewContact = isNewContact,
             onBackPress = {},
+            isProcessing = false,
+            onSavePressed = {},
+            onDeletePressed = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AppBarPreviewSaving(
+    @PreviewParameter(BooleanParameterProvider::class) isSaving: Boolean
+) {
+    AppContatosTheme {
+        AppBar(
+            isNewContact = true,
+            onBackPress = {},
+            isProcessing = isSaving,
+            onSavePressed = {},
+            onDeletePressed = {}
         )
     }
 }
@@ -116,7 +206,9 @@ private fun AppBarPreview(
 @Composable
 private fun FormContent(
     modifier: Modifier = Modifier,
-    contact: Contact
+    formState: FormState,
+    onFormEvent: (FormEvent) -> Unit,
+    isSaving: Boolean
 ) {
     Column(
         modifier = modifier
@@ -129,8 +221,8 @@ private fun FormContent(
             .padding(horizontal = 16.dp, vertical = 8.dp)
         ContactAvatar(
             modifier = Modifier.padding(16.dp),
-            firstName = contact.firstName,
-            lastName = contact.lastName,
+            firstName = formState.firstName.value,
+            lastName = formState.lastName.value,
             size = 150.dp,
             textStyle = MaterialTheme.typography.displayLarge
         )
@@ -141,9 +233,13 @@ private fun FormContent(
             FormTextField(
                 modifier = formTextFieldModifier,
                 label = "Nome",
-                value = contact.firstName,
-                onValueChange = {},
-                keyboardCapitalization = KeyboardCapitalization.Words
+                value = formState.firstName.value,
+                errorMessage = formState.firstName.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdateFirstName(newValue))
+                },
+                keyboardCapitalization = KeyboardCapitalization.Words,
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -152,9 +248,13 @@ private fun FormContent(
             FormTextField(
                 modifier = formTextFieldModifier,
                 label = "Sobrenome",
-                value = contact.lastName,
-                onValueChange = {},
-                keyboardCapitalization = KeyboardCapitalization.Words
+                value = formState.lastName.value,
+                errorMessage = formState.lastName.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdateLastName(newValue))
+                },
+                keyboardCapitalization = KeyboardCapitalization.Words,
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -164,9 +264,13 @@ private fun FormContent(
             FormTextField(
                 modifier = formTextFieldModifier,
                 label = "Telefone",
-                value = contact.phoneNumber,
-                onValueChange = {},
-                keyboardType = KeyboardType.Phone
+                value = formState.phoneNumber.value,
+                errorMessage = formState.phoneNumber.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdatePhoneNumber(newValue))
+                },
+                keyboardType = KeyboardType.Phone,
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -176,9 +280,13 @@ private fun FormContent(
             FormTextField(
                 modifier = formTextFieldModifier,
                 label = "E-mail",
-                value = contact.email,
-                onValueChange = {},
-                keyboardType = KeyboardType.Email
+                value = formState.email.value,
+                errorMessage = formState.email.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdateEmail(newValue))
+                },
+                keyboardType = KeyboardType.Email,
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -187,8 +295,12 @@ private fun FormContent(
             FormDatePicker(
                 modifier = formTextFieldModifier,
                 label = "Data de aniversário",
-                value = contact.BirthDate,
-                onValueChange = {}
+                value = formState.birthDate.value,
+                errorMessage = formState.birthDate.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdateBirthDate(newValue))
+                },
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -198,9 +310,13 @@ private fun FormContent(
             FormTextField(
                 modifier = formTextFieldModifier,
                 label = "Valor patrimonial",
-                value = contact.assetValue.toString(),
-                onValueChange = {},
-                keyboardType = KeyboardType.Number
+                value = formState.assetValue.value,
+                errorMessage = formState.assetValue.errorMessage,
+                onValueChange = { newValue ->
+                    onFormEvent(FormEvent.UpdateAssetValue(newValue))
+                },
+                keyboardType = KeyboardType.Number,
+                enabled = !isSaving
             )
         }
         val choiceOptionsModifier = Modifier.padding(8.dp)
@@ -210,8 +326,11 @@ private fun FormContent(
             FormCheckbox(
                 modifier = choiceOptionsModifier,
                 label = "Favorito",
-                checked = contact.isFavorite,
-                onCheckChanged = {}
+                checked = formState.isFavorite.value,
+                onCheckChanged = { newValue ->
+                    onFormEvent(FormEvent.UpdateIsFavorite(newValue))
+                },
+                enabled = !isSaving
             )
         }
         FormFieldRow(
@@ -221,15 +340,21 @@ private fun FormContent(
                 modifier = choiceOptionsModifier,
                 label = "Pessoal",
                 value = ContactTypeEnum.PERSONAL,
-                groupValue = contact.type,
-                onValueChanged = {}
+                groupValue = formState.type.value,
+                onValueChanged = { newValue ->
+                    onFormEvent(FormEvent.UpdateType(newValue))
+                },
+                enabled = !isSaving
             )
             FormRadioButton(
                 modifier = choiceOptionsModifier,
                 label = "Profissional",
                 value = ContactTypeEnum.PROFESSIONAL,
-                groupValue = contact.type,
-                onValueChanged = {}
+                groupValue = formState.type.value,
+                onValueChanged = { newValue ->
+                    onFormEvent(FormEvent.UpdateType(newValue))
+                },
+                enabled = !isSaving
             )
         }
     }
@@ -246,7 +371,49 @@ private fun ContactFormScreenPreview() {
 fun FormContentPreview(modifier: Modifier = Modifier) {
     AppContatosTheme {
         FormContent(
-            contact = Contact()
+            formState = FormState(),
+            onFormEvent = {},
+            isSaving = false
+        )
+    }
+}
+
+@Composable
+fun ConfirmationDialog(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    content: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        modifier = modifier,
+        title = title?.let{
+            {Text(it)}
+        },
+        text = {Text(content)},
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Confirmar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+@Preview(showBackground = true)
+fun ConfirmationDialogPreview(modifier: Modifier = Modifier) {
+    AppContatosTheme {
+        ConfirmationDialog(
+            content = "Deseja deletar o contato?",
+            onDismiss = {},
+            onConfirm = {}
         )
     }
 }

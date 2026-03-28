@@ -2,6 +2,7 @@ package com.tonial.appcontatos.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -45,6 +46,13 @@ fun AppContactsNavHost(
             ContactFormScreen(
                 onBackPress = {
                     naveController.popBackStack()
+                },
+                onContactSaved = {
+                    naveController.navigate("list"){
+                        popUpTo(naveController.graph.findStartDestination().id){
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
